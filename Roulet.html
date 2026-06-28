@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS2 Рулетка</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.02) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 70%, rgba(255,255,255,0.03) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+        .app { max-width:1300px; width:100%; }
+
+        .header { text-align:center; padding:20px 0 10px; }
+        .header h1 {
+            font-family:'Orbitron',sans-serif; font-size:3.2rem; font-weight:700; letter-spacing:6px;
+            text-transform:uppercase;
+            background:linear-gradient(90deg,#fff,#aaa,#fff,#aaa);
+            background-size:300% auto;
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+            animation: shimmer 5s linear infinite;
+            text-shadow:0 0 40px rgba(255,255,255,0.05);
+        }
+        @keyframes shimmer { 0%{background-position:0% center;} 100%{background-position:300% center;} }
+        .header p { color:#888; letter-spacing:2px; margin-top:4px; font-size:0.9rem; }
+
+        .roulettes-grid {
+            display:grid; grid-template-columns:1fr 1fr; gap:30px; margin:25px 0 35px;
+        }
+        @media (max-width:800px) { .roulettes-grid { grid-template-columns:1fr; gap:40px; } }
+
+        .roulette-card {
+            background:rgba(16,16,16,0.8);
+            backdrop-filter:blur(10px);
+            border-radius:30px;
+            padding:25px 20px 30px;
+            border:1px solid rgba(255,255,255,0.06);
+            box-shadow:0 20px 50px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.03);
+            transition:border-color 0.4s, box-shadow 0.4s;
+            position:relative;
+            overflow:hidden;
+        }
+        .roulette-card::before {
+            content:'';
+            position:absolute; top:-50%; left:-50%; width:200%; height:200%;
+            background:radial-gradient(circle at 30% 40%, rgba(255,255,255,0.02), transparent 70%);
+            pointer-events:none;
+        }
+        .roulette-card:hover {
+            border-color:rgba(255,255,255,0.15);
+            box-shadow:0 25px 70px rgba(0,0,0,0.9), 0 0 60px rgba(255,255,255,0.02);
+        }
+        .roulette-card::after {
+            content:'';
+            position:absolute; top:0; left:0; right:0; bottom:0;
+            background:radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.03), transparent 70%);
+            pointer-events:none;
+        }
+
+        .card-title {
+            font-family:'Orbitron',sans-serif; font-size:1.2rem; letter-spacing:2px;
+            text-align:center; margin-bottom:18px; color:#ccc; text-transform:uppercase;
+            border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:12px;
+        }
+        .card-title span {
+            background:linear-gradient(135deg,#fff,#888);
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
+
+        .roulette-window {
+            background:#0b0b0b;
+            border-radius:18px;
+            padding:8px 0;
+            margin-bottom:20px;
+            border:1px solid rgba(255,255,255,0.05);
+            height:170px;
+            overflow:hidden;
+            box-shadow:inset 0 0 40px rgba(0,0,0,0.9);
+            position:relative;
+            transition:filter 0.2s;
+        }
+        .roulette-window.spinning {
+            filter: blur(3px) brightness(0.7);
+            transition: filter 0.08s;
+        }
+        .roulette-list {
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            transition:transform 0.1s ease-out;
+            will-change:transform;
+        }
+        .roulette-item {
+            height:50px;
+            line-height:50px;
+            font-size:1.2rem;
+            color:#aaa;
+            text-align:center;
+            width:100%;
+            padding:0 12px;
+            font-family:'Roboto',sans-serif;
+            letter-spacing:0.5px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            transition: all 0.2s ease;
+            position:relative;
+            opacity:0.7;
+            transform:scale(0.95);
+        }
+        .roulette-item.active {
+            color:#fff;
+            font-weight:700;
+            font-size:1.6rem;
+            opacity:1;
+            transform:scale(1);
+            text-shadow:0 0 30px rgba(255,255,255,0.2);
+            background:linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+        }
+        .roulette-item.slide-in {
+            animation: slideUp 0.15s ease-out;
+        }
+        @keyframes slideUp {
+            0% { opacity:0; transform:translateY(-15px) scale(0.9); }
+            100% { opacity:1; transform:translateY(0) scale(1); }
+        }
+
+        .spin-btn {
+            display:block; width:100%; padding:14px;
+            font-family:'Orbitron',sans-serif; font-size:1.1rem; letter-spacing:3px;
+            text-transform:uppercase;
+            background:linear-gradient(135deg,#1a1a1a,#0a0a0a);
+            border:1px solid rgba(255,255,255,0.1);
+            border-radius:50px;
+            color:#fff;
+            cursor:pointer;
+            transition:all 0.3s ease;
+            box-shadow:0 6px 20px rgba(0,0,0,0.6);
+            position:relative;
+            overflow:hidden;
+        }
+        .spin-btn:hover {
+            background:linear-gradient(135deg,#2a2a2a,#151515);
+            border-color:rgba(255,255,255,0.3);
+            transform:scale(1.02);
+            box-shadow:0 0 50px rgba(255,255,255,0.04);
+        }
+        .spin-btn:active { transform:scale(0.96); }
+        .spin-btn:disabled {
+            opacity:0.3; pointer-events:none; filter:grayscale(0.6);
+        }
+        .spin-btn::after {
+            content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%;
+            background:radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05), transparent 70%);
+            opacity:0; transition:0.3s;
+        }
+        .spin-btn:hover::after { opacity:1; }
+
+        .name-panel { margin-top:18px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.04); }
+        .input-group { display:flex; gap:12px; flex-wrap:wrap; }
+        .input-group input {
+            flex:1; min-width:150px; padding:12px 18px;
+            background:rgba(20,20,20,0.8); border:1px solid rgba(255,255,255,0.08);
+            border-radius:30px; color:#fff; font-size:1rem; outline:none;
+            transition:border 0.3s, box-shadow 0.3s;
+            font-family:'Roboto',sans-serif;
+        }
+        .input-group input:focus {
+            border-color:rgba(255,255,255,0.3);
+            box-shadow:0 0 30px rgba(255,255,255,0.02);
+        }
+        .input-group button {
+            padding:12px 28px;
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.1);
+            border-radius:30px;
+            color:#ccc;
+            font-weight:700;
+            cursor:pointer;
+            transition:all 0.3s;
+            font-family:'Roboto',sans-serif;
+            letter-spacing:1px;
+        }
+        .input-group button:hover {
+            background:rgba(255,255,255,0.1);
+            border-color:rgba(255,255,255,0.3);
+            color:#fff;
+        }
+
+        .name-list {
+            display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;
+            max-height:100px; overflow-y:auto; padding:4px 2px;
+        }
+        .name-tag {
+            background:rgba(255,255,255,0.04);
+            padding:4px 16px;
+            border-radius:20px;
+            font-size:0.9rem;
+            color:#bbb;
+            border:1px solid rgba(255,255,255,0.04);
+            display:flex; align-items:center; gap:8px;
+            transition:0.2s;
+        }
+        .name-tag:hover { background:rgba(255,255,255,0.08); }
+        .name-tag .del {
+            cursor:pointer; color:#555; font-weight:700; font-size:1.1rem;
+            transition:0.2s; line-height:1;
+        }
+        .name-tag .del:hover { color:#ff6b6b; transform:scale(1.2); }
+
+        .notes-section {
+            margin-top:40px; padding-top:30px;
+            border-top:1px solid rgba(255,255,255,0.04);
+        }
+        .notes-section h2 {
+            font-family:'Orbitron',sans-serif; font-size:1.5rem; letter-spacing:2px;
+            color:#bbb; margin-bottom:16px; text-align:center;
+        }
+        .notes-section textarea {
+            width:100%; padding:16px;
+            background:rgba(20,20,20,0.7);
+            border:1px solid rgba(255,255,255,0.06);
+            border-radius:20px;
+            color:#eee; font-size:1rem; resize:vertical; min-height:80px;
+            font-family:'Roboto',sans-serif; outline:none;
+            transition:border 0.3s;
+        }
+        .notes-section textarea:focus { border-color:rgba(255,255,255,0.2); }
+        .notes-actions {
+            display:flex; gap:14px; margin:16px 0 22px; flex-wrap:wrap;
+        }
+        .notes-actions button {
+            padding:10px 30px;
+            background:rgba(255,255,255,0.03);
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:30px;
+            color:#bbb;
+            cursor:pointer;
+            transition:all 0.3s;
+            font-family:'Roboto',sans-serif;
+            letter-spacing:1px;
+        }
+        .notes-actions button:hover {
+            background:rgba(255,255,255,0.08);
+            color:#fff;
+            border-color:rgba(255,255,255,0.2);
+        }
+
+        .notes-list {
+            display:flex; flex-direction:column; gap:12px;
+            max-height:400px; overflow-y:auto; padding-right:6px;
+        }
+        .note-item {
+            background:rgba(255,255,255,0.02);
+            padding:14px 20px;
+            border-radius:16px;
+            border-left:3px solid rgba(255,255,255,0.06);
+            font-size:0.95rem;
+            color:#ccc;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            transition:0.2s;
+            word-break:break-word;
+        }
+        .note-item:hover { background:rgba(255,255,255,0.04); }
+        .note-item .note-time {
+            font-size:0.7rem; color:#555; margin-right:16px; white-space:nowrap;
+        }
+        .note-item .note-del {
+            cursor:pointer; color:#555; font-weight:700; font-size:1.2rem;
+            transition:0.2s; padding:0 6px;
+        }
+        .note-item .note-del:hover { color:#ff6b6b; }
+
+        .audio-control {
+            position:fixed; bottom:30px; right:30px; z-index:999;
+            background:rgba(16,16,16,0.85); backdrop-filter:blur(10px);
+            border-radius:50px; padding:10px 18px;
+            display:flex; align-items:center; gap:14px;
+            border:1px solid rgba(255,255,255,0.05);
+            box-shadow:0 10px 30px rgba(0,0,0,0.6);
+        }
+        .audio-control button {
+            background:none; border:none; color:#aaa; font-size:1.3rem;
+            cursor:pointer; transition:0.2s; padding:0 4px;
+        }
+        .audio-control button:hover { color:#fff; transform:scale(1.1); }
+        .audio-control span { font-size:0.7rem; color:#555; letter-spacing:1px; }
+
+        .toast {
+            position:fixed; top:30px; left:50%; transform:translateX(-50%);
+            background:rgba(16,16,16,0.92); backdrop-filter:blur(12px);
+            padding:14px 40px; border-radius:50px;
+            border:1px solid rgba(255,255,255,0.06);
+            color:#fff; font-weight:400; z-index:9999;
+            box-shadow:0 20px 60px rgba(0,0,0,0.8);
+            transition:opacity 0.4s ease, transform 0.4s ease;
+            opacity:0; transform:translateX(-50%) translateY(-30px);
+            pointer-events:none;
+            font-family:'Roboto',sans-serif;
+        }
+        .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+        ::-webkit-scrollbar { width:5px; }
+        ::-webkit-scrollbar-track { background:#111; }
+        ::-webkit-scrollbar-thumb { background:#333; border-radius:10px; }
+        ::-webkit-scrollbar-thumb:hover { background:#555; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+
+    <div class="app">
+        <header class="header">
+            <h1>CS2 · Рулетка</h1>
+            <p>Выбери игрока и квест — испытай удачу</p>
+        </header>
+
+        <div class="roulettes-grid">
+            <div class="roulette-card">
+                <div class="card-title"><span>👤 Игрок</span></div>
+                <div class="roulette-window" id="nameWindow">
+                    <div class="roulette-list" id="nameList"></div>
+                </div>
+                <button class="spin-btn" id="spinNameBtn">Крутить</button>
+
+                <div class="name-panel">
+                    <div class="input-group">
+                        <input type="text" id="nameInput" placeholder="Добавить имя..." maxlength="20">
+                        <button id="addNameBtn">➕ Добавить</button>
+                    </div>
+                    <div class="name-list" id="nameTags"></div>
+                </div>
+            </div>
+
+            <div class="roulette-card">
+                <div class="card-title"><span>🎯 Квест</span></div>
+                <div class="roulette-window" id="questWindow">
+                    <div class="roulette-list" id="questList"></div>
+                </div>
+                <button class="spin-btn" id="spinQuestBtn">Крутить</button>
+                <div style="margin-top:12px; font-size:0.75rem; color:#444; text-align:center; letter-spacing:1px;">
+                    <span id="questCount">0</span> квестов
+                </div>
+            </div>
+        </div>
+
+        <section class="notes-section">
+            <h2>📝 Заметки для результатов</h2>
+            <textarea id="noteInput" placeholder="Напишите заметку (результат рулетки)..."></textarea>
+            <div class="notes-actions">
+                <button id="addNoteBtn">➕ Добавить заметку</button>
+                <button id="clearNotesBtn">🗑 Очистить все</button>
+            </div>
+            <div class="notes-list" id="notesList"></div>
+        </section>
+    </div>
+
+    <div class="audio-control">
+        <button id="musicToggle">🔊</button>
+        <span>фон</span>
+        <button id="soundToggle">🔊</button>
+        <span>звуки</span>
+    </div>
+
+    <audio id="bgMusic" loop preload="auto" volume="0.04">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // Квесты на ВЕСЬ МАТЧ — количественные задачи, сложные и смешные
+            const DEFAULT_QUESTS = [
+                "Сделать 20 убийств с пистолетов",
+                "Сделать 3 клатча 1v3",
+                "Обезвредить 5 бомб",
+                "Выиграть 10 раундов без покупок",
+                "Сделать 15 убийств с AWP",
+                "Убить 5 врагов через стену",
+                "Сделать 10 убийств в прыжке",
+                "Сделать 8 хэдшотов с Deagle",
+                "Выиграть 5 раундов только с пистолетом",
+                "Убить 3 врагов гранатами",
+                "Сделать 2 ниндзя-дефьюза",
+                "Сделать 5 убийств  одной обоймой",
+                "Убить 4 врагов с разворота на 360°",
+                "Сделать 7 убийств с ассистом от флешки",
+                "Убить 5 врагов с помощью зевса",
+                "Сделать 7 убийства без прицела (no-scope)",
+                "Убить 5 врагов с двух рук (Dual Berettas)",
+                "Сделать 10 убийств с MP9",
+                "Убить 4 врагов с помощью молотова",
+                "Сделать 5 клатчей 1v2 с AWP",
+                "Убить 6 врагов через дым",
+                "Сделать 4 килла с гранаты",
+                "Убить 5 врагов с ножа в спину",
+                "каждый второй раунд без оружия (только нож,гранаты)",
+                "Убить 6 врагов с первого выстрела",
+                "Сделать 15 убийств с любого оружия за матч"
+            ];
+
+            let names = [];
+            let quests = [...DEFAULT_QUESTS];
+            let notes = [];
+
+            const nameListEl = document.getElementById('nameList');
+            const questListEl = document.getElementById('questList');
+            const nameTagsEl = document.getElementById('nameTags');
+            const notesListEl = document.getElementById('notesList');
+            const nameInput = document.getElementById('nameInput');
+            const noteInput = document.getElementById('noteInput');
+            const spinNameBtn = document.getElementById('spinNameBtn');
+            const spinQuestBtn = document.getElementById('spinQuestBtn');
+            const addNameBtn = document.getElementById('addNameBtn');
+            const addNoteBtn = document.getElementById('addNoteBtn');
+            const clearNotesBtn = document.getElementById('clearNotesBtn');
+            const questCountEl = document.getElementById('questCount');
+            const toastEl = document.getElementById('toast');
+            const nameWindow = document.getElementById('nameWindow');
+            const questWindow = document.getElementById('questWindow');
+
+            const bgMusic = document.getElementById('bgMusic');
+            const musicToggle = document.getElementById('musicToggle');
+            const soundToggle = document.getElementById('soundToggle');
+            let soundEnabled = true;
+            let musicEnabled = true;
+
+            function showToast(msg, duration = 2500) {
+                toastEl.textContent = msg;
+                toastEl.classList.add('show');
+                clearTimeout(toastEl._hideTimer);
+                toastEl._hideTimer = setTimeout(() => {
+                    toastEl.classList.remove('show');
+                }, duration);
+            }
+
+            let audioCtx = null;
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            function playClick(high = false) {
+                if (!soundEnabled) return;
+                try {
+                    initAudio();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.frequency.value = high ? 900 : 600;
+                    osc.type = 'sine';
+                    gain.gain.value = 0.05;
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.07);
+                } catch (e) {}
+            }
+            function playWin() {
+                if (!soundEnabled) return;
+                try {
+                    initAudio();
+                    const notesF = [523, 659, 784];
+                    notesF.forEach((freq, i) => {
+                        setTimeout(() => {
+                            const osc = audioCtx.createOscillator();
+                            const gain = audioCtx.createGain();
+                            osc.connect(gain);
+                            gain.connect(audioCtx.destination);
+                            osc.frequency.value = freq;
+                            osc.type = 'sine';
+                            gain.gain.value = 0.04;
+                            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+                            osc.start();
+                            osc.stop(audioCtx.currentTime + 0.2);
+                        }, i * 120);
+                    });
+                } catch (e) {}
+            }
+
+            function saveData() {
+                try {
+                    localStorage.setItem('cs2_roulette_names', JSON.stringify(names));
+                    localStorage.setItem('cs2_roulette_notes', JSON.stringify(notes));
+                } catch (e) {}
+            }
+
+            function loadData() {
+                try {
+                    const n = localStorage.getItem('cs2_roulette_names');
+                    if (n) names = JSON.parse(n);
+                    const nt = localStorage.getItem('cs2_roulette_notes');
+                    if (nt) notes = JSON.parse(nt);
+                } catch (e) {}
+                if (names.length === 0) {
+                    names = ['Игрок 1', 'Игрок 2', 'Игрок 3'];
+                }
+            }
+
+            function renderNameTags() {
+                nameTagsEl.innerHTML = names.map((n, i) =>
+                    `<span class="name-tag">${n} <span class="del" data-index="${i}">×</span></span>`
+                ).join('');
+                nameTagsEl.querySelectorAll('.del').forEach(el => {
+                    el.addEventListener('click', function() {
+                        const idx = parseInt(this.dataset.index);
+                        if (!isNaN(idx) && idx >= 0 && idx < names.length) {
+                            names.splice(idx, 1);
+                            saveData();
+                            renderNameTags();
+                            renderRoulette('name', 0);
+                        }
+                    });
+                });
+            }
+
+            function renderRoulette(type, centerIndex) {
+                const list = type === 'name' ? nameListEl : questListEl;
+                const items = type === 'name' ? names : quests;
+                if (list.children.length !== 5) {
+                    list.innerHTML = '';
+                    for (let i = 0; i < 5; i++) {
+                        const div = document.createElement('div');
+                        div.className = 'roulette-item';
+                        div.dataset.pos = i;
+                        list.appendChild(div);
+                    }
+                }
+                updateRouletteItems(type, centerIndex || 0);
+            }
+
+            function updateRouletteItems(type, centerIndex) {
+                const list = type === 'name' ? nameListEl : questListEl;
+                const items = type === 'name' ? names : quests;
+                const children = list.children;
+                if (items.length === 0) {
+                    Array.from(children).forEach(el => {
+                        el.textContent = '—';
+                        el.classList.remove('active', 'slide-in');
+                    });
+                    return;
+                }
+                const total = items.length;
+                for (let i = 0; i < 5; i++) {
+                    const idx = (centerIndex - 2 + i + total) % total;
+                    const el = children[i];
+                    const newText = items[idx];
+                    if (el.textContent !== newText) {
+                        el.classList.remove('slide-in');
+                        void el.offsetWidth;
+                        el.textContent = newText;
+                        el.classList.add('slide-in');
+                    }
+                    el.classList.remove('active');
+                    if (i === 2) el.classList.add('active');
+                }
+            }
+
+            function spinRoulette(type, btn) {
+                const items = type === 'name' ? names : quests;
+                if (items.length === 0) {
+                    showToast(type === 'name' ? '❌ Сначала добавьте имена!' : '❌ Нет квестов!');
+                    return;
+                }
+                btn.disabled = true;
+                playClick(true);
+                const windowEl = type === 'name' ? nameWindow : questWindow;
+                windowEl.classList.add('spinning');
+
+                const targetIdx = Math.floor(Math.random() * items.length);
+                const steps = 20 + Math.floor(Math.random() * 15);
+                const sequence = [];
+                for (let i = 0; i < steps; i++) {
+                    sequence.push(Math.floor(Math.random() * items.length));
+                }
+                sequence.push(targetIdx);
+
+                let currentStep = 0;
+                function doStep() {
+                    if (currentStep >= sequence.length) {
+                        windowEl.classList.remove('spinning');
+                        updateRouletteItems(type, targetIdx);
+                        playWin();
+                        showToast(`🎯 Выпало: ${items[targetIdx]}`, 3000);
+                        btn.disabled = false;
+                        return;
+                    }
+                    const idx = sequence[currentStep];
+                    updateRouletteItems(type, idx);
+                    playClick(false);
+                    currentStep++;
+                    const progress = currentStep / sequence.length;
+                    const delay = 30 + progress * progress * 250;
+                    setTimeout(doStep, delay);
+                }
+                doStep();
+            }
+
+            function renderNotes() {
+                notesListEl.innerHTML = notes.map((note, i) => {
+                    const time = note.time || '—';
+                    return `<div class="note-item">
+                                <span>${note.text}</span>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <span class="note-time">${time}</span>
+                                    <span class="note-del" data-index="${i}">✕</span>
+                                </div>
+                            </div>`;
+                }).join('');
+                notesListEl.querySelectorAll('.note-del').forEach(el => {
+                    el.addEventListener('click', function() {
+                        const idx = parseInt(this.dataset.index);
+                        if (!isNaN(idx) && idx >= 0 && idx < notes.length) {
+                            notes.splice(idx, 1);
+                            saveData();
+                            renderNotes();
+                        }
+                    });
+                });
+            }
+
+            function addNote(text) {
+                if (!text.trim()) return showToast('Введите текст заметки');
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+                notes.push({ text: text.trim(), time: timeStr });
+                saveData();
+                renderNotes();
+                noteInput.value = '';
+                showToast('✅ Заметка сохранена');
+            }
+
+            function init() {
+                loadData();
+                questCountEl.textContent = quests.length;
+
+                renderNameTags();
+                renderRoulette('name', 0);
+                renderRoulette('quest', 0);
+                renderNotes();
+
+                addNameBtn.addEventListener('click', function() {
+                    const val = nameInput.value.trim();
+                    if (!val) return showToast('Введите имя');
+                    if (names.includes(val)) return showToast('Такое имя уже есть');
+                    names.push(val);
+                    nameInput.value = '';
+                    saveData();
+                    renderNameTags();
+                    renderRoulette('name', 0);
+                    showToast(`➕ Имя "${val}" добавлено`);
+                });
+                nameInput.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') addNameBtn.click();
+                });
+
+                spinNameBtn.addEventListener('click', function() {
+                    spinRoulette('name', this);
+                });
+                spinQuestBtn.addEventListener('click', function() {
+                    spinRoulette('quest', this);
+                });
+
+                addNoteBtn.addEventListener('click', function() {
+                    addNote(noteInput.value);
+                });
+                noteInput.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        addNoteBtn.click();
+                    }
+                });
+                clearNotesBtn.addEventListener('click', function() {
+                    if (notes.length === 0) return showToast('Нет заметок');
+                    if (confirm('Удалить все заметки?')) {
+                        notes = [];
+                        saveData();
+                        renderNotes();
+                        showToast('🗑 Все заметки удалены');
+                    }
+                });
+
+                musicToggle.addEventListener('click', function() {
+                    musicEnabled = !musicEnabled;
+                    if (musicEnabled) {
+                        bgMusic.play().catch(() => {});
+                        this.textContent = '🔊';
+                    } else {
+                        bgMusic.pause();
+                        this.textContent = '🔇';
+                    }
+                });
+                soundToggle.addEventListener('click', function() {
+                    soundEnabled = !soundEnabled;
+                    this.textContent = soundEnabled ? '🔊' : '🔇';
+                    showToast(soundEnabled ? 'Звуки включены' : 'Звуки выключены');
+                });
+
+                document.addEventListener('click', function initAudioOnClick() {
+                    if (musicEnabled) {
+                        bgMusic.play().catch(() => {});
+                    }
+                    document.removeEventListener('click', initAudioOnClick);
+                }, { once: true });
+
+                bgMusic.addEventListener('error', function() {
+                    console.warn('Фоновая музыка недоступна');
+                });
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
